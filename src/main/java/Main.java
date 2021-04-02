@@ -1,56 +1,63 @@
 
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
 import org.xml.sax.SAXException;
-
 import javax.xml.parsers.*;
-import javax.xml.transform.OutputKeys;
-import javax.xml.transform.Transformer;
 import javax.xml.transform.TransformerException;
-import javax.xml.transform.TransformerFactory;
-import javax.xml.transform.dom.DOMSource;
-import javax.xml.transform.stream.StreamResult;
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.*;
 import java.util.List;
-import java.util.Map;
+
 
 public class Main {
 
     public static void main(String[] args) {
 
+        String inputDirPath = "/home/alex/Desktop/pss_project/input_files";
+
 
         try {
-            SAXParserFactory saxParserFactory = SAXParserFactory.newInstance();
-            File dir = new File("input_files");
-            for (File file : dir.listFiles()) {
-                // check for file name format if it is 'ordersXX.xml'
-                if (file.getName().matches("orders\\d{2}[.]xml")) {
+            WatchService watchService = FileSystems.getDefault().newWatchService();
+            Path path = Paths.get(inputDirPath);
 
-                    // reading process
-                    SAXParser saxParser = saxParserFactory.newSAXParser();
-                    XmlProductReader xmlProductReader = new XmlProductReader();
-                    saxParser.parse(file, xmlProductReader);
+            path.register(
+                    watchService,
+                    StandardWatchEventKinds.ENTRY_CREATE,
+                    StandardWatchEventKinds.ENTRY_MODIFY
+                    );
 
-                    // sorting process
-                    ProductsSorter productsSorter = new ProductsSorter();
-                    SupplierOrder supplierOrder = new SupplierOrder();
-                    List<Product> productList = xmlProductReader.getProducts();
-                    supplierOrder.setSupplierOrder(productsSorter.orderProductsByDateAndPrice(productsSorter.orderBySupplier(productList)));
+            WatchKey key;
+            while ((key = watchService.take()) != null) {
+                SAXParserFactory saxParserFactory = SAXParserFactory.newInstance();
+                for (WatchEvent<?> event : key.pollEvents()) {
+                        if (event.context().toString().matches("orders\\d{2}[.]xml")) {
+                            // reading process
+                            SAXParser saxParser = saxParserFactory.newSAXParser();
+                            XmlProductReader xmlProductReader = new XmlProductReader();
+                            saxParser.parse(path + "/" + event.context().toString(), xmlProductReader);
 
-                    // writing process
-                    XmlProductWriterImpl xmlProductWriter = new XmlProductWriterImpl();
-                    xmlProductWriter.writeToXml(supplierOrder);
+                            // sorting process
+                            ProductsSorter productsSorter = new ProductsSorter();
+                            SupplierOrder supplierOrder = new SupplierOrder();
+                            List<Product> productList = xmlProductReader.getProducts();
+                            supplierOrder.setSupplierOrder(productsSorter.orderProductsByDateAndPrice(productsSorter.orderBySupplier(productList)));
+
+                            // writing process
+                            XmlProductWriterImpl xmlProductWriter = new XmlProductWriterImpl();
+                            xmlProductWriter.writeToXml(supplierOrder);
+                        }
+                    key.reset();
                     }
                 }
-            } catch (ParserConfigurationException parserConfigurationException) {
-            parserConfigurationException.printStackTrace();
-        } catch (TransformerException transformerException) {
-            transformerException.printStackTrace();
-        } catch (IOException ioException) {
-            ioException.printStackTrace();
-        } catch (SAXException saxException) {
-            saxException.printStackTrace();
+            } catch (IOException exception) {
+            exception.printStackTrace();
+        } catch (ParserConfigurationException configurationException) {
+            configurationException.printStackTrace();
+        } catch (InterruptedException interruptedException) {
+            interruptedException.printStackTrace();
+        } catch (SAXException exception) {
+            exception.printStackTrace();
+        } catch (TransformerException exception) {
+            exception.printStackTrace();
         }
     }
     }

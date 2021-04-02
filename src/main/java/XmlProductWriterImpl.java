@@ -13,6 +13,8 @@ import java.util.Map;
 
 public class XmlProductWriterImpl implements XmlProductWriterI {
 
+    private String outputDirPath="/home/alex/Desktop/pss_project/output_files/";
+
 
     DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
     DocumentBuilder dBuilder;
@@ -41,7 +43,7 @@ public class XmlProductWriterImpl implements XmlProductWriterI {
             DOMSource source = new DOMSource(doc);
 
             // write to file
-            StreamResult outputFile = new StreamResult(new File("output_files/" + entry.getKey() + entry.getValue().get(0).getIdForOutputFile() + ".xml"));
+            StreamResult outputFile = new StreamResult(new File(outputDirPath + entry.getKey() + entry.getValue().get(0).getIdForOutputFile() + ".xml"));
 
             // write data
             transformer.transform(source, outputFile);
